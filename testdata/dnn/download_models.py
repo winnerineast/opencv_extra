@@ -110,8 +110,8 @@ models = [
         sha='c8a5a000ee8d8dd75886f152a50a9c5b53d726a5',
         filename='tensorflow_inception_graph.pb'),
     Model(
-        name='Enet',
-        url='https://www.dropbox.com/sh/dywzk3gyb12hpe5/AABoUwqQGWvClUu27Z1EWeu9a/model-best.net?dl=1',
+        name='Enet',  # https://github.com/e-lab/ENet-training
+        url='https://www.dropbox.com/s/tdde0mawbi5dugq/Enet-model-best.net?dl=1',
         sha='b4123a73bf464b9ebe9cfc4ab9c2d5c72b161315',
         filename='Enet-model-best.net'),
     Model(
@@ -222,11 +222,6 @@ models = [
         url='http://eecs.berkeley.edu/~rich.zhang/projects/2016_colorization/files/demo_v2/colorization_release_v2.caffemodel',
         sha='21e61293a3fa6747308171c11b6dd18a68a26e7f',
         filename='colorization_release_v2.caffemodel'),
-    Model(
-        name='Face_detector',
-        url='https://raw.githubusercontent.com/opencv/opencv/master/samples/dnn/face_detector/deploy.prototxt',
-        sha='006baf926232df6f6332defb9c24f94bb9f3764e',
-        filename='opencv_face_detector.prototxt'),
     Model(
         name='Face_detector',
         url='https://github.com/opencv/opencv_3rdparty/raw/dnn_samples_face_detector_20170830/res10_300x300_ssd_iter_140000.caffemodel',
@@ -443,38 +438,15 @@ models = [
         sha='a74974096088954ca4e4e89bec212c1ac2ab0745',
         filename='onnx/data/output_zfnet512.pb'),
     Model(
-        name='VGG16 (ONNX)',
-        url='https://s3.amazonaws.com/onnx-model-zoo/vgg/vgg16/vgg16.tar.gz',
-        sha='7c02db88b2191457155f0ccca1d755e3e18604bf',
-        filename='vgg16.tar.gz'),
-    Model(
-        name='VGG16 (ONNX)',
-        archive='vgg16.tar.gz',
-        member='vgg16/vgg16.onnx',
-        sha='d2833339fae2e5256698ee923731fd9a523fb747',
-        filename='onnx/models/vgg16.onnx'),
-    Model(
-        name='VGG16 (ONNX)',
-        archive='vgg16.tar.gz',
-        member='vgg16/test_data_set_0/input_0.pb',
-        sha='55c285cfbc4d61e3c026302a3af9e7d220b82d0a',
-        filename='onnx/data/input_vgg16.pb'),
-    Model(
-        name='VGG16 (ONNX)',
-        archive='vgg16.tar.gz',
-        member='vgg16/test_data_set_0/output_0.pb',
-        sha='dcd5945025906ff4ea2270963b795c8fa29d4cd8',
-        filename='onnx/data/output_vgg16.pb'),
-    Model(
         name='VGG16_bn (ONNX)',
         url='https://s3.amazonaws.com/onnx-model-zoo/vgg/vgg16-bn/vgg16-bn.tar.gz',
-        sha='9dee2249f6336d19d7f6a0149a26825ec458dbf3',
+        sha='60f4685aed632d2ce3b137017cf44ae1a5c55459',
         filename='vgg16-bn.tar.gz'),
     Model(
         name='VGG16_bn (ONNX)',
         archive='vgg16-bn.tar.gz',
         member='vgg16-bn/vgg16-bn.onnx',
-        sha='dfcd3df92498416171e47b771a7c31de98558872',
+        sha='e282e2137f1317d03ca1f2702e9cfddaf847e44d',
         filename='onnx/models/vgg16-bn.onnx'),
     Model(
         name='VGG16_bn (ONNX)',
@@ -491,13 +463,13 @@ models = [
     Model(
         name='ResNet-18v1 (ONNX)',
         url='https://s3.amazonaws.com/onnx-model-zoo/resnet/resnet18v1/resnet18v1.tar.gz',
-        sha='83235d56d0b9118cb389f477bb45ddbfbb4e5c66',
+        sha='d132be4857d024de9caa21fd5300dee7c063bc35',
         filename='resnet18v1.tar.gz'),
     Model(
         name='ResNet-18v1 (ONNX)',
         archive='resnet18v1.tar.gz',
         member='resnet18v1/resnet18v1.onnx',
-        sha='5a9c94d32be17baf96653a6d2f732339b48835a0',
+        sha='9d96d7142c5ce43aa61ce67124b8eb5530afff4c',
         filename='onnx/models/resnet18v1.onnx'),
     Model(
         name='ResNet-18v1 (ONNX)',
@@ -514,13 +486,13 @@ models = [
     Model(
         name='ResNet-50v1 (ONNX)',
         url='https://s3.amazonaws.com/onnx-model-zoo/resnet/resnet50v1/resnet50v1.tar.gz',
-        sha='268df7b647c2ee522d85b4fb033b76a1e295c881',
+        sha='a4ac2da7e0024d61fdb80481496ba966b48b9fea',
         filename='resnet50v1.tar.gz'),
     Model(
         name='ResNet-50v1 (ONNX)',
         archive='resnet50v1.tar.gz',
         member='resnet50v1/resnet50v1.onnx',
-        sha='da4e9405da74deac8b7ff07038ed165f41065b44',
+        sha='06aa26c6de448e11c64cd80cf06f5ab01de2ec9b',
         filename='onnx/models/resnet50v1.onnx'),
     Model(
         name='ResNet-50v1 (ONNX)',
@@ -640,13 +612,13 @@ models = [
     Model(
         name='LResNet100E-IR (ONNX)',
         url='https://s3.amazonaws.com/onnx-model-zoo/arcface/resnet100/resnet100.tar.gz',
-        sha='537760f73256599acf40587528b291345c96c8c2',
+        sha='b1178813b705d9d44ed806aa442f0b1cb11aea0a',
         filename='resnet100.tar.gz'),
     Model(
         name='LResNet100E-IR (ONNX)',
         archive='resnet100.tar.gz',
         member='resnet100/resnet100.onnx',
-        sha='549bad59f620791c58a22363d74db765dd13fa54',
+        sha='d307e426cf55cddf9f9292b5ffabb474eec93638',
         filename='onnx/models/LResNet100E_IR.onnx'),
     Model(
         name='LResNet100E-IR (ONNX)',
@@ -798,6 +770,21 @@ models = [
         member='shufflenet/test_data_set_0/output_0.pb',
         sha='6a33ed6ccef4c69a27a3993363c3f854d0f79bb0',
         filename='onnx/data/output_shufflenet.pb'),
+    Model(
+        name='ResNet-34_kinetics (ONNX)', # https://github.com/kenshohara/video-classification-3d-cnn-pytorch
+        url='https://www.dropbox.com/s/065l4vr8bptzohb/resnet-34_kinetics.onnx?dl=1',
+        sha='88897629e4abb0fddef939f0c2d668a4edeb0788',
+        filename='resnet-34_kinetics.onnx'),
+    Model(
+        name='Alexnet Facial Keypoints (ONNX)', # https://github.com/ismalakazel/Facial-Keypoint-Detection
+        url='https://drive.google.com/uc?export=dowload&id=1etGXT9WQK1KjDkJ0pUTH-CaHHva4p9cY',
+        sha='e1b82b56b59ab96b50189e1b39487d91d4fa0eea',
+        filename='onnx/models/facial_keypoints.onnx'),
+    Model(
+        name='LightWeight Human Pose Estimation (ONNX)', # https://github.com/Daniil-Osokin/lightweight-human-pose-estimation.pytorch
+        url='https://drive.google.com/uc?export=dowload&id=1T2Kq01WXzPMrQdnEOUEiVBhwouW8Pka5',
+        sha='20370164b8c43aa14625c0be4e31f62b9b397ac4',
+        filename='onnx/models/lightweight_pose_estimation.onnx'),
 ]
 
 # Note: models will be downloaded to current working directory

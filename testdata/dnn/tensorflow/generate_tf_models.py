@@ -30,7 +30,7 @@ def prepare_for_dnn(sess, graph_def, in_node, out_node, out_graph, dtype, optimi
         graph_def = TransformGraph(graph_def, [in_node], [out_node], transforms)
     # Serialize
     with tf.gfile.FastGFile(out_graph, 'wb') as f:
-            f.write(graph_def.SerializeToString())
+        f.write(graph_def.SerializeToString())
 
 tf.reset_default_graph()
 tf.Graph().as_default()
@@ -44,11 +44,14 @@ def writeBlob(data, name):
     if data.ndim == 4:
         # NHWC->NCHW
         np.save(name + '.npy', data.transpose(0, 3, 1, 2).astype(np.float32))
+    elif data.ndim == 5:
+        # NDHWC->NCDHW
+        np.save(name + '.npy', data.transpose(0, 4, 1, 2, 3).astype(np.float32))
     else:
         # Save raw data.
         np.save(name + '.npy', data.astype(np.float32))
 
-def runModel(inp, out, name):
+def runModel(inpName, outName, name):
     with tf.Session(graph=tf.Graph()) as localSession:
         localSession.graph.as_default()
 
@@ -58,7 +61,7 @@ def runModel(inp, out, name):
         tf.import_graph_def(graph_def, name='')
 
         inputData = gen_data(inp)
-        outputData = localSession.run(localSession.graph.get_tensor_by_name(out.name),
+        outputData = localSession.run(localSession.graph.get_tensor_by_name(outName),
                                       feed_dict={localSession.graph.get_tensor_by_name(inp.name): inputData})
         writeBlob(inputData, name + '_in')
         writeBlob(outputData, name + '_out')
@@ -225,6 +228,10 @@ conv = tf.layers.conv2d(inp, filters=4, kernel_size=[5, 5], strides=(2, 2),
                         bias_initializer=tf.random_normal_initializer())
 save(inp, conv, 'spatial_padding')
 ################################################################################
+inp = tf.placeholder(tf.float32, [1, 10, 10, 3], 'input')
+pad = tf.pad(inp, [[0, 0], [3, 3], [3, 3], [0, 0]], mode='REFLECT')
+save(inp, pad, 'mirror_pad')
+################################################################################
 inp = tf.placeholder(tf.float32, [1, 2, 3], 'input')
 bn = tf.add(inp, tf.Variable(tf.random_normal(inp.shape)))
 reshape = tf.reshape(bn, [-1, 3])
@@ -346,7 +353,7 @@ conv = tf.layers.conv2d(inputs=inp, filters=3, kernel_size=[1, 1],
                         activation=tf.nn.relu,
                         bias_initializer=tf.random_normal_initializer())
 save(inp, conv, 'uint8_single_conv', quantize=True)
-runModel(inp, conv, 'uint8_single_conv')
+runModel(inp, conv.name, 'uint8_single_conv')
 ################################################################################
 inp = tf.placeholder(tf.float32, [1, 4, 4, 1], 'input')
 conv = tf.layers.conv2d(inp, filters=3, kernel_size=[3, 3], padding='SAME')
@@ -672,6 +679,162 @@ conv = tf.layers.conv2d(inp, filters=5, kernel_size=[1, 1],
 sub = conv - inp
 save(inp, sub, 'eltwise_sub')
 ################################################################################
+inp = tf.placeholder(tf.float32, [None, 2, 3, 4], 'input')
+conv = tf.layers.conv2d(inp, filters=3, kernel_size=[1, 1])
+softmax = tf.contrib.slim.softmax(conv)
+save(inp, softmax, 'slim_softmax')
+################################################################################
+# issue https://github.com/opencv/opencv/issues/14224
+inp_node = 'img_inputs'
+out_node = 'MobileFaceNet/MobileFaceNet/Conv2d_0/add'
+with tf.Session(graph=tf.Graph()) as localSession:
+    localSession.graph.as_default()
+
+    with tf.gfile.FastGFile('frozen_model.pb') as f:
+        graph_def = tf.GraphDef()
+        graph_def.ParseFromString(f.read())
+        for node in graph_def.node:
+            if node.name == inp_node:
+                del node.attr['shape']
+
+    tf.import_graph_def(graph_def, name='')
+
+    inputData = gen_data(tf.placeholder(tf.float32, [1, 4, 5, 3], inp_node))
+    outputData = localSession.run(localSession.graph.get_tensor_by_name(out_node + ':0'),
+                                  feed_dict={inp_node + ':0': inputData})
+    writeBlob(inputData, 'slim_batch_norm_in')
+    writeBlob(outputData, 'slim_batch_norm_out')
+
+    graph_def = TransformGraph(graph_def, [inp_node], [out_node], ['fold_constants', 'strip_unused_nodes'])
+    with tf.gfile.FastGFile('slim_batch_norm_net.pb', 'wb') as f:
+        f.write(graph_def.SerializeToString())
+
+################################################################################
+# issue https://github.com/opencv/opencv/issues/13839
+inp_node = 'PNet/conv3/add'
+out_node = 'PNet/cls_prob'
+with tf.Session(graph=tf.Graph()) as localSession:
+    localSession.graph.as_default()
+
+    with tf.gfile.FastGFile('PNet_pnet.pb') as f:
+        graph_def = tf.GraphDef()
+        graph_def.ParseFromString(f.read())
+        graph_def = TransformGraph(graph_def, [inp_node], [out_node], ['strip_unused_nodes'])
+
+    tf.import_graph_def(graph_def, name='')
+
+    inputData = gen_data(tf.placeholder(tf.float32, [1, 4, 5, 16], inp_node))
+    outputData = localSession.run(localSession.graph.get_tensor_by_name(out_node + ':0'),
+                                  feed_dict={inp_node + ':0': inputData})
+    writeBlob(inputData, 'slim_softmax_v2_in')
+    writeBlob(outputData, 'slim_softmax_v2_out')
+
+    with tf.gfile.FastGFile('slim_softmax_v2_net.pb', 'wb') as f:
+        f.write(graph_def.SerializeToString())
+################################################################################
+inp = tf.placeholder(tf.float32, [1, 4, 6, 5, 3], 'input') # NDHWC format
+conv3d = tf.layers.conv3d(inputs=inp, filters=2, kernel_size=[2, 3, 4], use_bias=True, padding='same')
+save(inp, conv3d, 'conv3d')
+################################################################################
+inp = tf.placeholder(tf.float32, [1, 4, 6, 5, 3], 'input') # NDHWC format
+maxpool3d = tf.layers.max_pooling3d(inputs=inp, pool_size=(3, 2, 3), strides=(1, 2, 1), padding='same')
+save(inp, maxpool3d, 'max_pool3d')
+################################################################################
+inp = tf.placeholder(tf.float32, [1, 5, 4, 5, 2], 'input') # NDHWC format
+avepool3d = tf.layers.average_pooling3d(inputs=inp, pool_size=(3, 3, 2), strides=(2, 1, 1), padding='valid')
+save(inp, avepool3d, 'ave_pool3d')
+################################################################################
+# issue https://github.com/opencv/opencv/issues/13494
+inp_node = 'input_image'
+out_node = 'SUBPIXEL/SUBPIXEL/subpixel_image/Identity'
+with tf.Session(graph=tf.Graph()) as localSession:
+    localSession.graph.as_default()
+
+    with tf.gfile.FastGFile('simple_subpixel.optimized.pb') as f:
+        graph_def = tf.GraphDef()
+        graph_def.ParseFromString(f.read())
+
+    tf.import_graph_def(graph_def, name='')
+
+    inputData = gen_data(tf.placeholder(tf.float32, [1, 1, 1, 4], inp_node))
+    outputData = localSession.run(localSession.graph.get_tensor_by_name(out_node + ':0'),
+                                  feed_dict={inp_node + ':0': inputData})
+    writeBlob(inputData, 'subpixel_in')
+    writeBlob(outputData, 'subpixel_out')
+
+    for node in graph_def.node:
+        if node.op == 'Placeholder':
+            node.attr["data_format"].s = "NHWC"
+
+    with tf.gfile.FastGFile('subpixel_net.pb', 'wb') as f:
+        f.write(graph_def.SerializeToString())
+################################################################################
+inp = tf.placeholder(tf.float32, [1, 2, 3, 4], 'input')
+conv = tf.layers.conv2d(inp, filters=4, kernel_size=[1, 1])
+strided_slice = conv[:, 1:, :2, 2:3]
+save(inp, strided_slice, 'strided_slice')
+################################################################################
+
+inp = tf.placeholder(tf.float32, [1, 2, 3, 4, 2], 'input')
+bn = tf.layers.batch_normalization(inp, training=False, fused=False, name='batch_norm3d',
+                                   beta_initializer=tf.random_normal_initializer(),
+                                   gamma_initializer=tf.random_normal_initializer(),
+                                   moving_mean_initializer=tf.random_uniform_initializer(-2, 1),
+                                   moving_variance_initializer=tf.random_uniform_initializer(0.1, 2),)
+save(inp, bn, 'batch_norm3d', optimize=False)
+################################################################################
+inp = tf.placeholder(tf.float32, [1, 4, 6, 64], 'activation_8/Elu')
+runModel(inp, 'batch_normalization_1/cond/FusedBatchNorm:0', 'switch_identity')
+################################################################################
+inp = tf.placeholder(tf.float32, [1, 2, 3, 64], 'Relu_8')
+runModel(inp, 'conv2d_transpose_1:0', 'keras_deconv_same_v2')
+################################################################################
+inp = tf.placeholder(tf.float32, [1, 2, 4, 3], 'ContentImage')
+runModel(inp, 'Relu:0', 'keras_batch_norm_training')
+################################################################################
+inp = tf.placeholder(tf.float32, [1, 2, 2, 4], 'Split')
+features1 = tf.split(inp, num_or_size_splits=2, axis=3)[0]
+features2 = tf.split(inp, num_or_size_splits=2, axis=3)[1]
+merged = tf.concat([features1, features2], axis=3)
+save(inp, merged, 'split')
+################################################################################
+from tensorflow.python.ops.nn_grad import _MaxPoolGrad as MaxUnPooling2D
+
+inp = tf.placeholder(tf.float32, [1, 7, 7, 3], 'input')
+pool = tf.layers.max_pooling2d(inp, pool_size=(2, 2), strides=(2, 2))
+conv = tf.layers.conv2d(inputs=pool, filters=3, kernel_size=[1, 1], padding='VALID')
+unpool = MaxUnPooling2D(pool.op, conv)
+save(inp, unpool, 'max_pool_grad')
+################################################################################
+inp = tf.placeholder(tf.float32, [1, 2, 3, 4], 'input')
+conv = tf.layers.conv2d(inp, filters=5, kernel_size=[1, 1])
+flatten = tf.contrib.layers.flatten(conv)
+weights = tf.Variable(tf.random_normal([2*3*5, 4]), name='matmul_weights')
+mm = tf.matmul(flatten, weights)
+reshape = tf.reshape(mm, [-1, 1, 1, 4], 'reshaped')  # NHWC
+save(inp, reshape, 'matmul_layout')
+################################################################################
+# issue https://github.com/opencv/opencv/issues/15141
+inp_node = 'mobilenetv2_1.00_96_input'
+out_node = 'mobilenetv2_1.00_96/Conv1_relu/Relu6'
+with tf.Session(graph=tf.Graph()) as localSession:
+    localSession.graph.as_default()
+
+    with tf.gfile.FastGFile('normal_and_abnormal_mnet_v2_96_96_Flatten.pb') as f:
+        graph_def = tf.GraphDef()
+        graph_def.ParseFromString(f.read())
+        graph_def = optimize_for_inference_lib.optimize_for_inference(graph_def, [inp_node], [out_node], tf.float32.as_datatype_enum)
+
+    tf.import_graph_def(graph_def, name='')
+
+    inputData = gen_data(tf.placeholder(tf.float32, [1, 4, 5, 3], inp_node))
+    outputData = localSession.run(localSession.graph.get_tensor_by_name(out_node + ':0'),
+                                  feed_dict={inp_node + ':0': inputData})
+    writeBlob(inputData, 'keras_learning_phase_in')
+    writeBlob(outputData, 'keras_learning_phase_out')
+
+    with tf.gfile.FastGFile('keras_learning_phase_net.pb', 'wb') as f:
+        f.write(graph_def.SerializeToString())
 
 # Uncomment to print the final graph.
 # with tf.gfile.FastGFile('fused_batch_norm_net.pb') as f:
